@@ -1,1 +1,645 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kucing Kalcer Generator PPM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Pustaka untuk Ekspor ke Word -->
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        /* Palet Warna Kustom */
+        :root {
+            --bg-dark: #2D3342;
+            --bg-light: #F5F8F9;
+            --accent: #689F99;
+            --text-dark: #2D3342;
+            --text-light: #F5F8F9;
+            --border-color: #4A5568; /* A slightly lighter border for dark theme */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+        }
+
+        .main-container {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            border: 1px solid var(--accent);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Kustomisasi Form */
+        .form-checkbox:checked {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        .form-input {
+            background-color: #FFFFFF;
+            border-color: #D1D5DB;
+            color: var(--text-dark);
+        }
+        .form-input:focus {
+            --tw-ring-color: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(104, 159, 153, 0.5);
+        }
+        .form-label {
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        /* Tombol */
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #5a8a84; /* Versi lebih gelap dari accent */
+        }
+         .btn-primary:disabled {
+            background-color: #a7c4c1;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            border: 1px solid var(--accent);
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover{
+            background-color: var(--accent);
+            color: var(--bg-dark);
+        }
+        
+        #hasil-ppm {
+            word-wrap: break-word;
+            line-height: 1.5;
+            color: var(--text-dark);
+            background-color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+        @media print {
+            body { background-image: none; background-color: white; }
+            body * { visibility: hidden; }
+            #hasil-container, #hasil-container * { visibility: visible; }
+            #hasil-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0;
+                margin: 0;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .print-hidden { display: none !important; }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <main class="container mx-auto p-4 md:p-8 flex-grow">
+        <header class="text-center mb-8 py-8">
+            <h1 class="text-3xl md:text-4xl font-bold" style="color: var(--accent);">CAPEK KAN? SINI MINCER BANTU</h1>
+            <p class="text-gray-300 mt-2 text-lg">Bikin Perencanaan Pembelajaran Mendalam (Kurikulum Merdeka) jadi lebih sat-set!</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Kolom Formulir -->
+            <div id="form-column" class="main-container p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-6 border-b pb-3" style="color: var(--accent); border-color: #D1D5DB;">📝 Input Data PPM</h2>
+                <form id="ppm-form">
+                    
+                    <div class="mb-4">
+                        <label for="api-key" class="block text-sm font-medium form-label mb-1">🔑 Google AI API Key</label>
+                        <input type="password" id="api-key" name="apiKey" class="mt-1 block w-full px-3 py-2 form-input rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2" placeholder="Masukkan API Key Gemini kamu di sini" required>
+                        <p class="text-xs text-gray-500 mt-1">Dapatkan di <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hover:underline" style="color: var(--accent);">Google AI Studio</a>.</p>
+                    </div>
+
+                    <!-- Informasi Umum -->
+                    <h3 class="text-lg font-semibold mt-6 border-t pt-4 form-label" style="border-color: var(--accent);">Informasi Umum & Header</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label for="judul-ppm" class="block text-sm font-medium form-label">Judul PPM</label>
+                            <input type="text" id="judul-ppm" name="judulPpm" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Mengelola Kartu Persediaan" required>
+                        </div>
+                        <div>
+                            <label for="satuan-pendidikan" class="block text-sm font-medium form-label">Satuan Pendidikan</label>
+                            <input type="text" id="satuan-pendidikan" name="satuanPendidikan" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" value="SMK Zaidul Ali" required>
+                        </div>
+                        <div>
+                            <label for="program-keahlian" class="block text-sm font-medium form-label">Program Keahlian</label>
+                            <input type="text" id="program-keahlian" name="programKeahlian" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Seni dan Ekonomi Kreatif" required>
+                        </div>
+                        <div>
+                            <label for="konsentrasi-keahlian" class="block text-sm font-medium form-label">Konsentrasi Keahlian</label>
+                            <input type="text" id="konsentrasi-keahlian" name="konsentrasiKeahlian" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Desain Komunikasi Visual" required>
+                        </div>
+                        <div>
+                            <label for="mata-pelajaran" class="block text-sm font-medium form-label">Mata Pelajaran</label>
+                            <input type="text" id="mata-pelajaran" name="mataPelajaran" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Bahasa Indonesia" required>
+                        </div>
+                        <div>
+                            <label for="elemen" class="block text-sm font-medium form-label">Elemen</label>
+                            <input type="text" id="elemen" name="elemen" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Ragam Bahasa" required>
+                        </div>
+                        <div>
+                            <label for="fase-kelas-semester" class="block text-sm font-medium form-label">Fase/Kelas/Semester</label>
+                            <input type="text" id="fase-kelas-semester" name="faseKelasSemester" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: F / XI / Ganjil" required>
+                        </div>
+                        <div>
+                            <label for="tahun-pelajaran" class="block text-sm font-medium form-label">Tahun Pelajaran</label>
+                            <input type="text" id="tahun-pelajaran" name="tahunPelajaran" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: 2025/2026" required>
+                        </div>
+                        <div>
+                            <label for="alokasi-waktu" class="block text-sm font-medium form-label">Alokasi Waktu</label>
+                            <input type="text" id="alokasi-waktu" name="alokasiWaktu" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: 3 Pertemuan (6 JP x 45 Menit)" required>
+                        </div>
+                         <div>
+                            <label for="jumlah-pertemuan" class="block text-sm font-medium form-label">Jumlah Pertemuan</label>
+                            <input type="number" id="jumlah-pertemuan" name="jumlahPertemuan" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" value="3" required>
+                        </div>
+                        <div>
+                            <label for="penyusun" class="block text-sm font-medium form-label">Nama Penyusun</label>
+                            <input type="text" id="penyusun" name="penyusun" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" required>
+                        </div>
+                        <div>
+                            <label for="nip-penyusun" class="block text-sm font-medium form-label">NIP Penyusun (Opsional)</label>
+                            <input type="text" id="nip-penyusun" name="nipPenyusun" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Kosongkan jika tidak ada">
+                        </div>
+                         <div>
+                            <label for="nama-kepsek" class="block text-sm font-medium form-label">Nama Kepala Sekolah</label>
+                            <input type="text" id="nama-kepsek" name="namaKepsek" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" required>
+                        </div>
+                        <div>
+                            <label for="nip-kepsek" class="block text-sm font-medium form-label">NIP Kepsek (Opsional)</label>
+                            <input type="text" id="nip-kepsek" name="nipKepsek" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Kosongkan jika tidak ada">
+                        </div>
+                        <div>
+                            <label for="tanggal" class="block text-sm font-medium form-label">Tanggal TTD</label>
+                            <input type="date" id="tanggal" name="tanggal" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" required>
+                        </div>
+                    </div>
+
+                    <!-- Identifikasi -->
+                    <h3 class="text-lg font-semibold mt-6 border-t pt-4 form-label" style="border-color: var(--accent);">Identifikasi</h3>
+                     <div class="mt-2">
+                        <label for="profil-peserta-didik" class="block text-sm font-medium form-label">Profil Peserta Didik (Kompetensi Awal)</label>
+                        <textarea id="profil-peserta-didik" name="profilPesertaDidik" rows="3" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Jelaskan kompetensi awal yang sudah dimiliki peserta didik" required></textarea>
+                    </div>
+                     <div class="mt-4">
+                        <label for="materi-pembelajaran" class="block text-sm font-medium form-label">Materi Pembelajaran</label>
+                        <textarea id="materi-pembelajaran" name="materiPembelajaran" rows="3" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Sebutkan materi pokok yang akan diajarkan" required></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium form-label">Dimensi Profil Lulusan</label>
+                        <div class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Beriman, bertakwa kepada Tuhan YME, & berakhlak mulia"> <span class="ml-2 text-sm">Beriman & Bertakwa</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Berkebinekaan global"> <span class="ml-2 text-sm">Berkebinekaan Global</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Gotong royong"> <span class="ml-2 text-sm">Gotong Royong</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Mandiri"> <span class="ml-2 text-sm">Mandiri</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Bernalar kritis"> <span class="ml-2 text-sm">Bernalar Kritis</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Kreatif"> <span class="ml-2 text-sm">Kreatif</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Komunikatif"> <span class="ml-2 text-sm">Komunikatif</span></label>
+                            <label class="inline-flex items-center"><input type="checkbox" class="form-checkbox h-5 w-5 rounded" name="dimensi" value="Kolaboratif"> <span class="ml-2 text-sm">Kolaboratif</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Desain Pembelajaran -->
+                    <h3 class="text-lg font-semibold mt-6 border-t pt-4 form-label" style="border-color: var(--accent);">Desain Pembelajaran</h3>
+                    <div class="mt-2">
+                        <label for="cp" class="block text-sm font-medium form-label">Capaian Pembelajaran (CP)</label>
+                        <textarea id="cp" name="cp" rows="4" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" required></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="tujuan-pembelajaran" class="block text-sm font-medium form-label">Tujuan Pembelajaran (TP)</label>
+                        <textarea id="tujuan-pembelajaran" name="tujuanPembelajaran" rows="3" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" required></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="praktik-pedagogis" class="block text-sm font-medium form-label">Praktik Pedagogis (Model Pembelajaran)</label>
+                        <input type="text" id="praktik-pedagogis" name="praktikPedagogis" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Discovery Learning, PBL, PJBL" required>
+                    </div>
+                    <div class="mt-4">
+                        <label for="kemitraan" class="block text-sm font-medium form-label">Kemitraan Pembelajaran (Opsional)</label>
+                        <textarea id="kemitraan" name="kemitraan" rows="2" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Wawancara dengan UMKM sekitar"></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="lingkungan" class="block text-sm font-medium form-label">Lingkungan Pembelajaran (Opsional)</label>
+                        <textarea id="lingkungan" name="lingkungan" rows="2" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Peserta didik mencari informasi dari berbagai sumber"></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="digital" class="block text-sm font-medium form-label">Pemanfaatan Digital (Opsional)</label>
+                        <textarea id="digital" name="digital" rows="2" class="mt-1 block w-full form-input rounded-md shadow-sm py-2 px-3" placeholder="Contoh: Membuat poster di Canva, riset via internet"></textarea>
+                    </div>
+
+                    <button id="generate-btn" type="submit" class="mt-8 w-full inline-flex justify-center py-3 px-4 border border-transparent shadow-sm text-lg font-medium rounded-md btn-primary disabled:opacity-50">
+                        ✨ Generate PPM
+                    </button>
+                </form>
+            </div>
+
+            <!-- Kolom Hasil -->
+            <div id="hasil-container" class="main-container p-6 rounded-xl shadow-lg print:shadow-none">
+                <div class="print-hidden flex flex-wrap justify-between items-center border-b pb-3 mb-6 gap-2" style="border-color: var(--accent);">
+                    <h2 class="text-2xl font-bold" style="color: var(--accent);">📄 Hasil PPM</h2>
+                    <div class="flex gap-2">
+                         <button id="export-btn" class="hidden btn-secondary font-bold py-2 px-4 rounded-lg inline-flex items-center">
+                           <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0-0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l3 3m0 0l3-3m-3 3v-7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>Ekspor ke Word (.docx)</span>
+                        </button>
+                        <button id="print-btn" onclick="window.print()" class="hidden btn-secondary font-bold py-2 px-4 rounded-lg inline-flex items-center">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            <span>Cetak ke PDF</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="status">
+                    <div class="text-center text-gray-500 py-16">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium" style="color: var(--text-dark);">Hasil PPM akan muncul di sini</h3>
+                        <p class="mt-1 text-sm text-gray-500">Isi formulir di samping dan klik generate.</p>
+                    </div>
+                </div>
+                <div id="hasil-ppm" class="prose max-w-none"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="page-footer" class="text-center p-4 text-sm print:hidden mt-auto" style="color: #9ca3af;">
+        &copy; 2025 - M. Imarul Haq
+    </footer>
+
+    <script>
+        // Set default date to today
+        document.getElementById('tanggal').valueAsDate = new Date();
+        const messageBox = document.createElement('div');
+        messageBox.style.position = 'fixed';
+        messageBox.style.top = '20px';
+        messageBox.style.left = '50%';
+        messageBox.style.transform = 'translateX(-50%)';
+        messageBox.style.backgroundColor = '#f8d7da';
+        messageBox.style.color = '#721c24';
+        messageBox.style.padding = '15px';
+        messageBox.style.border = '1px solid #f5c6cb';
+        messageBox.style.borderRadius = '8px';
+        messageBox.style.zIndex = '1000';
+        messageBox.style.display = 'none';
+        document.body.appendChild(messageBox);
+
+        function showMessage(message) {
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 3000);
+        }
+
+        const ppmForm = document.getElementById('ppm-form');
+        const generateBtn = document.getElementById('generate-btn');
+        const statusDiv = document.getElementById('status');
+        const hasilPpmDiv = document.getElementById('hasil-ppm');
+        const printBtn = document.getElementById('print-btn');
+        const exportBtn = document.getElementById('export-btn');
+
+        ppmForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(ppmForm);
+            const data = Object.fromEntries(formData.entries());
+            data.dimensiProfil = formData.getAll('dimensi');
+
+            if (!data.apiKey) {
+                showMessage('API Key tidak boleh kosong!');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>AI sedang berpikir...`;
+            statusDiv.innerHTML = `<div class="text-center py-16" style="color: var(--accent);"><p>Menyusun Perencanaan Pembelajaran Mendalam... Mohon tunggu.</p></div>`;
+            hasilPpmDiv.innerHTML = '';
+            printBtn.classList.add('hidden');
+            exportBtn.classList.add('hidden');
+
+            try {
+                const prompt = createPrompt(data);
+                const API_KEY = data.apiKey;
+                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        topP: 1,
+                        maxOutputTokens: 8192,
+                        responseMimeType: "application/json",
+                    }
+                };
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Request ke AI gagal: ${errorData.error.message}`);
+                }
+
+                const result = await response.json();
+                const textContent = result.candidates[0].content.parts[0].text;
+                // Clean the response from markdown and parse
+                const cleanedText = textContent.replace(/^```json\s*|```\s*$/g, '');
+                const aiContent = JSON.parse(cleanedText);
+                
+                displayPpm(data, aiContent);
+
+            } catch (error) {
+                console.error(error);
+                let userFriendlyError = error.message;
+                if (error.message.includes("API key not valid")) {
+                    userFriendlyError = "Sepertinya API Key yang Anda masukkan tidak valid. Mohon periksa kembali API Key Anda dari Google AI Studio dan coba lagi.";
+                } else if (error instanceof SyntaxError) {
+                    userFriendlyError = "Gagal memproses respons dari AI. Respons yang diterima bukan format JSON yang valid. Coba lagi nanti.";
+                }
+                statusDiv.innerHTML = `<div class="text-center text-red-600 py-16"><h3 class="text-lg font-medium">😭 Terjadi Kesalahan</h3><p class="mt-1 text-sm">${userFriendlyError}</p></div>`;
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '✨ Generate PPM';
+            }
+        });
+        
+        exportBtn.addEventListener('click', function() {
+            // Wrap the content in a div with the desired font for export
+            const exportContent = `<div style="font-family: Aptos, sans-serif;">${document.getElementById("hasil-ppm").innerHTML}</div>`;
+            var converted = htmlDocx.asBlob(exportContent, {
+                orientation: 'portrait',
+                margins: { top: 720, bottom: 720, left: 720, right: 720 }
+            });
+            const fileName = `PPM - ${document.getElementById('judul-ppm').value || 'Generated'}.docx`;
+            saveAs(converted, fileName);
+        });
+
+        function formatList(data, type = 'ol') {
+            if (!data) return '';
+            let items = [];
+            if (Array.isArray(data)) {
+                items = data;
+            } else if (typeof data === 'string') {
+                items = data.split('\n').map(item => item.trim()).filter(Boolean);
+            } else {
+                return String(data);
+            }
+            if (items.length === 0) return '';
+            const listItems = items.map(item => `<li>${item.replace(/^(\d+\.|-|\*)\s*/, '')}</li>`).join('');
+            return `<${type} style="margin: 0; padding-left: 1.5rem; list-style-position: outside;">${listItems}</${type}>`;
+        }
+
+        function createPrompt(formData) {
+            return `
+            Anda adalah seorang ahli dalam pengembangan kurikulum Kurikulum Merdeka untuk SMK.
+            Tugas Anda adalah membuat konten "Perencanaan Pembelajaran Mendalam" (PPM) yang sangat detail dan praktis.
+            Gunakan selalu istilah "Peserta didik". Output HARUS berupa JSON yang valid dan tidak mengandung markdown seperti \`\`\`json.
+
+            Struktur JSON yang Diinginkan:
+            {
+              "kriteriaKetercapaianTujuanPembelajaran": ["Buat array of strings untuk KKTP. Setiap string adalah satu KKTP."],
+              "narasiKemitraan": "Buat narasi elaboratif dari input '${formData.kemitraan}'. Jika input kosong, berikan string kosong.",
+              "narasiLingkungan": "Buat narasi elaboratif dari input '${formData.lingkungan}'. Jika input kosong, berikan string kosong.",
+              "narasiDigital": "Buat narasi elaboratif dari input '${formData.digital}'. Jika input kosong, berikan string kosong.",
+              "pengalamanBelajar": {
+                "materiPokok": "Sebutkan materi pokok utama dari '${formData.materiPembelajaran}'.",
+                "kegiatanAwal": {
+                    "deskripsi": "Buat satu paragraf kegiatan awal (doa, sapa, presensi, tujuan, alur, ice breaking).",
+                    "pemantik": ["Buat array of strings untuk 2-3 contoh pertanyaan pemantik. INSTRUKSI PENTING: Pertanyaan ini HARUS relevan dengan hierarki topik berikut: dimulai dari Elemen ('${formData.elemen}'), mengerucut ke Materi Pembelajaran ('${formData.materiPembelajaran}'), dan paling spesifik ke Judul PPM ('${formData.judulPpm}'). Gunakan bahasa baku namun tetap kaitkan dengan dunia nyata anak SMK untuk memancing rasa ingin tahu, BUKAN seperti soal tes."]
+                },
+                "kegiatanInti": [
+                  // BUAT OBJEK SEBANYAK ${formData.jumlahPertemuan}.
+                  // BAGI SINTAKS MODEL '${formData.praktikPedagogis}' KE DALAM PERTEMUAN SECARA LOGIS.
+                  // RINCIKAN AKTIVITAS GURU & PESERTA DIDIK, SERTA MEDIA YANG DIGUNAKAN (Video, LKPD, Canva, dll).
+                  { "pertemuanKe": 1, "deskripsi": "Deskripsi sangat rinci untuk pertemuan 1..." }
+                ],
+                "kegiatanPenutup": {
+                    "refleksiPesertaDidik": ["Buat array of strings untuk poin-poin refleksi peserta didik."],
+                    "refleksiPendidik": ["Buat array of strings untuk poin-poin refleksi pendidik."],
+                    "doaPenutup": "Peserta didik dan pendidik bersama-sama menutup pembelajaran dengan doa."
+                },
+                "referensi": ["Buku Paket XYZ Hal. 1-10", "Link YouTube: https://..."]
+              },
+              "asesmen": {
+                "awal": { "deskripsi": "Deskripsi asesmen awal...", "instrumen": "Contoh instrumen..." },
+                "formatif": [{ "pertemuanKe": 1, "bentuk": "Observasi...", "deskripsi": "Penjelasan..." }],
+                "sumatif": {
+                  "pertemuanKe": ${formData.jumlahPertemuan},
+                  "bentuk": "Tes Tulis",
+                  "soal": [
+                    // INSTRUKSI PENTING: Buatlah soal-soal dengan tingkat kesulitan rendah hingga menengah untuk mengukur KETERcapaian SETIAP KKTP yang telah Anda buat di atas. Pastikan setiap KKTP memiliki minimal satu soal yang relevan.
+                    { "nomor": 1, "pertanyaan": "Isi soal 1." }, { "nomor": 10, "pertanyaan": "Isi soal 10." }
+                  ],
+                  "kunciJawaban": [
+                    // INSTRUKSI PENTING: Berikan kunci jawaban yang LENGKAP dan JELAS untuk setiap soal di atas, bukan hanya petunjuk.
+                    { "nomor": 1, "jawaban": "Kunci jawaban 1." }, { "nomor": 10, "jawaban": "Kunci jawaban 10." }
+                  ]
+                }
+              },
+              "tabelCapaianSiswa": [
+                 // INSTRUKSI PENTING: Sekarang, petakan SETIAP KKTP dari atas ke nomor soal yang relevan yang baru saja Anda buat. Jangan ada KKTP yang terlewat.
+                 { "kktp": "Salin KKTP 1 dari atas.", "butirSoal": "Nomor soal yang mengukur KKTP 1." }
+              ]
+            }
+            `;
+        }
+
+        function displayPpm(formData, aiContent) {
+            statusDiv.innerHTML = '';
+            printBtn.classList.remove('hidden');
+            exportBtn.classList.remove('hidden');
+
+            const tableStyle = 'border: 1px solid #6b7280;';
+            const tdStyle = 'border: 1px solid #e5e7eb; padding: 0.5rem;';
+            const thStyle = 'border: 1px solid #e5e7eb; padding: 0.5rem; background-color: #eef2ff; text-align: center; color: var(--text-dark);';
+            const mainHeaderBg = '#eef2ff';
+
+            const createTableSection = (title, content) => `<tr><td style="${tdStyle} font-weight: 600; vertical-align: top; width: 30%; text-align: left;">${title}</td><td style="${tdStyle} vertical-align: top;">${content}</td></tr>`;
+            const createMainSectionHeader = (title) => `<div style="background-color: ${mainHeaderBg}; padding: 0.5rem; font-weight: bold; text-align: center; border: 1px solid #9ca3af; margin-top: 1rem; color: var(--text-dark);">${title}</div>`;
+
+            // Pengalaman Belajar
+            let pengalamanIntiHtml = '';
+            if (aiContent.pengalamanBelajar && aiContent.pengalamanBelajar.kegiatanInti) {
+                aiContent.pengalamanBelajar.kegiatanInti.forEach(p => {
+                    pengalamanIntiHtml += `<div style="margin-top: 0.5rem;"><b style="font-weight: 600;">Pertemuan ke-${p.pertemuanKe}:</b><div style="padding-left: 0.5rem;">${p.deskripsi}</div></div>`;
+                });
+            }
+            const { refleksiPesertaDidik, refleksiPendidik, doaPenutup } = aiContent.pengalamanBelajar.kegiatanPenutup;
+            const penutupContent = `
+                <div style='font-weight: 600;'>Refleksi Peserta Didik:</div>${formatList(refleksiPesertaDidik, 'ol')}
+                <div style='font-weight: 600; margin-top: 0.5rem;'>Refleksi Pendidik:</div>${formatList(refleksiPendidik, 'ol')}
+                <div style='margin-top: 0.5rem;'>${doaPenutup}</div>`;
+            
+            const kegiatanAwalHtml = `${aiContent.pengalamanBelajar.kegiatanAwal.deskripsi}<br><b style="font-weight:600;">Pertanyaan Pemantik:</b>${formatList(aiContent.pengalamanBelajar.kegiatanAwal.pemantik, 'ol')}`;
+
+            const pengalamanBelajarContent = `
+                <table style="width: 100%; border-collapse: collapse; font-size: 11pt; ${tableStyle}"><tbody>
+                    ${createTableSection('Materi Pokok', aiContent.pengalamanBelajar.materiPokok)}
+                    ${createTableSection('Pertemuan', formData.alokasiWaktu)}
+                    ${createTableSection('Kegiatan Awal', kegiatanAwalHtml)}
+                    ${createTableSection('Kegiatan Inti', pengalamanIntiHtml)}
+                    ${createTableSection('Kegiatan Penutup', penutupContent)}
+                    ${createTableSection('Referensi', formatList(aiContent.pengalamanBelajar.referensi))}
+                </tbody></table>
+            `;
+
+            // Asesmen
+            let asesmenContent = '';
+            if (aiContent.asesmen) {
+                const { awal, formatif, sumatif } = aiContent.asesmen;
+                let formatifHtml = '';
+                formatif.forEach(f => { formatifHtml += `<p style="margin:0;"><b>Pertemuan ${f.pertemuanKe}:</b> (${f.bentuk}) ${f.deskripsi}</p>`; });
+                
+                let sumatifSoalHtml = '<ol style="margin: 0; padding-left: 1.5rem; list-style-type: decimal;">';
+                sumatif.soal.forEach(s => { sumatifSoalHtml += `<li style="margin-top: 0.25rem;">${s.pertanyaan}</li>`; });
+                sumatifSoalHtml += '</ol>';
+
+                let sumatifKunciHtml = '<ol style="margin: 0; padding-left: 1.5rem; list-style-type: decimal;">';
+                sumatif.kunciJawaban.forEach(k => { sumatifKunciHtml += `<li style="margin-top: 0.25rem;">${k.jawaban}</li>`; });
+                sumatifKunciHtml += '</ol>';
+
+                asesmenContent = `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11pt; ${tableStyle}"><tbody>
+                        ${createTableSection('Asesmen Awal Pembelajaran', `${awal.deskripsi}<br>${awal.instrumen}`)}
+                        ${createTableSection('Asesmen Formatif', formatifHtml)}
+                        ${createTableSection('Asesmen Sumatif', `<b>Bentuk:</b> ${sumatif.bentuk} (Dilaksanakan pada pertemuan ke-${sumatif.pertemuanKe})<br><b style='margin-top: 0.5rem; display: block;'>Soal:</b>${sumatifSoalHtml}<br><b style='margin-top: 0.5rem; display: block;'>Kunci Jawaban:</b>${sumatifKunciHtml}`)}
+                    </tbody></table>
+                `;
+            }
+
+            // Tabel Capaian Siswa
+            let tabelCapaianHtml = `<div class="table-wrapper"><table style="width: 100%; border-collapse: collapse; ${tableStyle} margin-top: 0.5rem; font-size: 11pt;">`;
+            tabelCapaianHtml += `
+                <thead><tr>
+                    <th style="${thStyle}">Kriteria Ketercapaian Tujuan Pembelajaran</th><th style="${thStyle}">Butir Soal</th>
+                    <th style="${thStyle}" colspan="2">Baru Berkembang (21-40)</th><th style="${thStyle}" colspan="2">Layak (41-60)</th>
+                    <th style="${thStyle}" colspan="2">Cakap (61-80)</th><th style="color: var(--text-dark); ${thStyle}" colspan="2">Mahir (81-100)</th>
+                </tr></thead><tbody>`;
+            if (aiContent.tabelCapaianSiswa && aiContent.tabelCapaianSiswa.length > 0) {
+                aiContent.tabelCapaianSiswa.forEach(row => {
+                    tabelCapaianHtml += `
+                        <tr>
+                            <td style="${tdStyle} text-align: left;">${row.kktp}</td><td style="${tdStyle} text-align: center;">${row.butirSoal}</td>
+                            <td style="${tdStyle}" colspan="2"></td><td style="${tdStyle}" colspan="2"></td>
+                            <td style="${tdStyle}" colspan="2"></td><td style="${tdStyle}" colspan="2"></td>
+                        </tr>`;
+                });
+            }
+            tabelCapaianHtml += '</tbody></table></div>';
+            
+            const tanggalFormatted = new Date(formData.tanggal + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            hasilPpmDiv.innerHTML = `
+                <div style="font-family: 'Aptos', sans-serif; font-size: 11pt; line-height: 1.5; text-align: justify; color: var(--text-dark);">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <h1 style="font-size: 1.25rem; line-height: 1.75rem; font-weight: 700;">PERENCANAAN PEMBELAJARAN MENDALAM (PPM)</h1>
+                        <h2 style="font-size: 1.125rem; line-height: 1.75rem; font-weight: 600;">${formData.judulPpm.toUpperCase()}</h2>
+                    </div>
+                    
+                    <table style="width: 100%; text-align: left; font-size: 11pt; margin-bottom: 1rem; border-collapse: collapse;">
+                        <tbody>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;" width="30%">Satuan Pendidikan</td><td style="padding: 0.125rem 0;">: ${formData.satuanPendidikan}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Mata Pelajaran</td><td style="padding: 0.125rem 0;">: ${formData.mataPelajaran}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Fase/Kelas/Semester</td><td style="padding: 0.125rem 0;">: ${formData.faseKelasSemester}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Alokasi Waktu</td><td style="padding: 0.125rem 0;">: ${formData.alokasiWaktu}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Penyusun</td><td style="padding: 0.125rem 0;">: ${formData.penyusun}</td></tr>
+                        </tbody>
+                    </table>
+
+                    ${createMainSectionHeader('IDENTIFIKASI')}
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11pt; ${tableStyle}"><tbody>
+                        ${createTableSection('Profil Peserta Didik', formData.profilPesertaDidik)}
+                        ${createTableSection('Materi Pembelajaran', formData.materiPembelajaran)}
+                        ${createTableSection('Dimensi Profil Lulusan', formData.dimensiProfil.join(', '))}
+                    </tbody></table>
+
+                    ${createMainSectionHeader('DESAIN PEMBELAJARAN')}
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11pt; ${tableStyle}"><tbody>
+                        ${createTableSection('Capaian Pembelajaran (CP)', formData.cp)}
+                        ${createTableSection('Tujuan Pembelajaran (TP)', formData.tujuanPembelajaran)}
+                        ${createTableSection('Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)', formatList(aiContent.kriteriaKetercapaianTujuanPembelajaran, 'ol'))}
+                        ${createTableSection('Praktik Pedagogis', `Pembelajaran konstektual dan kooperatif menggunakan Model ${formData.praktikPedagogis}.`)}
+                        ${createTableSection('Kemitraan Pembelajaran', aiContent.narasiKemitraan || 'Tidak ada kemitraan khusus yang direncanakan.')}
+                        ${createTableSection('Lingkungan Pembelajaran', aiContent.narasiLingkungan || 'Pembelajaran dilaksanakan di ruang kelas yang kondusif.')}
+                        ${createTableSection('Pemanfaatan Digital', aiContent.narasiDigital || 'Tidak ada pemanfaatan digital khusus yang direncanakan.')}
+                    </tbody></table>
+
+                    ${createMainSectionHeader('PENGALAMAN BELAJAR')}
+                    ${pengalamanBelajarContent}
+                    
+                    ${createMainSectionHeader('ASESMEN')}
+                    ${asesmenContent}
+
+                    <p class="page-break" style="page-break-before: always; margin:0; padding:0;">&nbsp;</p>
+                    
+                    ${createMainSectionHeader('KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN PESERTA DIDIK')}
+                    <table style="width: 100%; text-align: left; font-size: 11pt; margin-top: 0.5rem; margin-bottom: 0.5rem; border-collapse: collapse;">
+                        <tbody>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;" width="30%">Nama Sekolah</td><td style="padding: 0.125rem 0;">: ${formData.satuanPendidikan}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Program Keahlian</td><td style="padding: 0.125rem 0;">: ${formData.programKeahlian}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Konsentrasi Keahlian</td><td style="padding: 0.125rem 0;">: ${formData.konsentrasiKeahlian}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Mata Pelajaran</td><td style="padding: 0.125rem 0;">: ${formData.mataPelajaran}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Fase</td><td style="padding: 0.125rem 0;">: ${formData.faseKelasSemester.split('/')[0]}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Elemen</td><td style="padding: 0.125rem 0;">: ${formData.elemen}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Kelas/Semester</td><td style="padding: 0.125rem 0;">: ${formData.faseKelasSemester.split('/').slice(1).join('/')}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Tahun Pelajaran</td><td style="padding: 0.125rem 0;">: ${formData.tahunPelajaran}</td></tr>
+                            <tr><td style="padding: 0.125rem 0; font-weight: 600; padding-right: 1rem;">Nama Peserta Didik</td><td style="padding: 0.125rem 0;">: .....................................................</td></tr>
+                        </tbody>
+                    </table>
+                    ${tabelCapaianHtml}
+                    <p style="font-size: 0.75rem; line-height: 1rem; margin-top: 0.5rem;"><b>Keterangan:</b> Baru berkembang dan Layak (Perlu Remidi), Cakap (Sudah Tercapai Tujuan Pembelajaran), Mahir (Perlu Penguatan / Pengayaan)</p>
+
+                    <table style="width: 100%; text-align: center; font-size: 11pt; margin-top: 2rem; border-collapse: collapse; border-style: none;">
+                        <tbody>
+                            <tr>
+                                <td style="width: 50%; vertical-align: top; border-style: none;">
+                                    <p style="margin:0;">Mengetahui,</p>
+                                    <p style="margin:0;">Kepala ${formData.satuanPendidikan}</p>
+                                    <p style="margin:0; padding-top: 4rem;">&nbsp;</p>
+                                    <p style="font-weight: bold; text-decoration: underline; margin:0;">${formData.namaKepsek}</p>
+                                    <p style="margin:0;">NIP. ${formData.nipKepsek || ' - '}</p>
+                                </td>
+                                <td style="width: 50%; vertical-align: top; border-style: none;">
+                                    <p style="margin:0;">Jember, ${tanggalFormatted}</p>
+                                    <p style="margin:0;">Guru Mata Pelajaran</p>
+                                    <p style="margin:0; padding-top: 4rem;">&nbsp;</p>
+                                    <p style="font-weight: bold; text-decoration: underline; margin:0;">${formData.penyusun}</p>
+                                    <p style="margin:0;">NIP. ${formData.nipPenyusun || ' - '}</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    </script>
+
+</body>
+</html>
+
 
